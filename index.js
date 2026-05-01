@@ -22,7 +22,7 @@ server.use('/auth', require('./Routes/auth.routes'))
 // and increasing efficiency on a smaller scale 
 io.on('connection', (socket) => {
     console.log('connected with: ', socket.id, socket.handshake.auth);
-    socket.broadcast.emit('user-connected', { id: socket.id });
+    socket.broadcast.emit('user-connected', { id: socket.id, platform: socket?.handshake?.auth?.platformInfo });
     socket.on('send-devinfo', (data) => {
         console.log(data);
     })
@@ -32,7 +32,7 @@ io.on('connection', (socket) => {
     });
     socket.on('disconnect', (reas) => {
         console.log(`disconnected to: ${socket.id} ${reas} `)
-        socket.broadcast.emit('user-left', { id: socket.id });
+        socket.broadcast.emit('user-left', { id: socket.id, platform: socket?.handshake?.auth?.platformInfo, reason: reas });
     })
 });
 
