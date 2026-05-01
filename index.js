@@ -1,4 +1,5 @@
 require('dotenv').config()
+const Sentry = require("@sentry/node");
 const express = require('express');
 const database = require('./Config/databaseconfig');
 const server = express();
@@ -12,7 +13,12 @@ const io = socketio(socketServer, {
 })
 
 database(); // establishing database connection
-
+// just plain initialization, more config on the way
+// using sentry cause it provides de-duplication
+// can use PM2 too
+Sentry.init({ dsn: process.env.SentryDSN });
+server.use(Sentry.Handlers.requestHandler());
+server.use(Sentry.Handlers.errorHandler());
 server.use(express.urlencoded());
 server.use(express.json());
 server.use('/', require('./Routes/index.routes'))
