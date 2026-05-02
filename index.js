@@ -1,5 +1,4 @@
 require('dotenv').config()
-const Sentry = require("@sentry/node");
 const express = require('express');
 const database = require('./Config/databaseconfig');
 const server = express();
@@ -13,12 +12,7 @@ const io = socketio(socketServer, {
 })
 
 database(); // establishing database connection
-// just plain initialization, more config on the way
-// using sentry cause it provides de-duplication
-// can use PM2 too
-Sentry.init({ dsn: process.env.SentryDSN });
-server.use(Sentry.Handlers.requestHandler());
-server.use(Sentry.Handlers.errorHandler());
+
 server.use(express.urlencoded());
 server.use(express.json());
 server.use('/', require('./Routes/index.routes'))
@@ -47,10 +41,11 @@ io.on('connection', (socket) => {
         console.log(data);
         socket.broadcast.emit('recieve-new-message', data);
     });
-    socket.on('disconnect', (reas) => {
+    socket.on('disconnesct', (reas) => {
         console.log(`disconnected to: ${socket.id} ${reas} `)
         socket.broadcast.emit('user-left', { id: socket.id, platform: formatPlatform(socket?.handshake?.auth?.platformInfo), reason: reas });
     })
+    // socket.on()
 });
 
 socketServer.listen(8080, () => {
