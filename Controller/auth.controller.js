@@ -5,7 +5,6 @@ const bcrypt = require('bcrypt')
 exports.addUser = async (req, res) => {
     try {
         let { username, password, email, displayName } = req.body;
-        console.log(`username: ${username}, password: ${password}, email: ${email}, displayName: ${displayName}`);
         if (username && password && email) {
             if (displayName === undefined || null) displayName = username
             // console.log('STATUS: hashing password !!!!') 
@@ -25,7 +24,7 @@ exports.addUser = async (req, res) => {
                 password
             }
             await userModel.create(userInfo)
-            console.log('data added in database, returning')
+            // console.log('data added in database, returning')
             return // to avoid potential overloading (or memory leak, if users expand), by ending running instance of req,res cycle
         } else return res.status(400).json('Insufficient Data') // 400 = bad request
 
@@ -41,11 +40,11 @@ exports.login = async (req, res) => {
             // let user = await userModel.findOne({ username: username }).select('-createdAt -updatedAt -__v -_id -email')
             let user = await userModel.findOne({ username: username }).select('username password _id')
             if (!user) return res.status(401).json('Invalid Credentials');
-            let isValid = await bcrypt.compare(user?.password, password);
+            let isValid = await bcrypt.compare(password, user?.password);
             if (!isValid) return res.status(401).json('Invalid Credentials');
             if (isValid === true) {
-                let jwttoken = jwt.sign({ username, _id })
-                return res.json(jwttoken);
+                let jwttoken = jwt.sign({ username, _id: user._id }, process.env.JWT_SECRET)
+                return res.json({ token: jwttoken });
             }
         } else if (email && password) {
             let user = await userModel.findOne({ email: email }).select('email password username _id')
@@ -53,8 +52,8 @@ exports.login = async (req, res) => {
             let isValid = await bcrypt.compare(user?.password, password);
             if (!isValid) return res.status(401).json('Invalid Credentials');
             if (isValid === true) {
-                let jwttoken = jwt.sign({ username, _id })
-                return res.json(jwttoken);
+                let jwttoken = jwt.sign({ username, _id: user._id })
+                return res.json({ token: jwttoken });
             }
         } else return res.status(401).json('Invalid Credentials');
     } catch (error) {

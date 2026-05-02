@@ -2,13 +2,25 @@ require('dotenv').config()
 const express = require('express');
 const database = require('./Config/databaseconfig');
 const server = express();
+const cors = require('cors'); // for express REST endpoints
 const socketio = require('socket.io');
+const { instrument } = require('@socket.io/admin-ui')
 const socketServer = require('http').createServer(server);
 const io = socketio(socketServer, {
     cors: {
-        origin: "*", // for depelopment stages only (for localhost, and github.io), will be changed to frontend url, in future
-        methods: ["GET", "POST"]
+        origin: ['http://localhost:3000', 'https://admin.socket.io'], // for depelopment stages only (for localhost, and github.io), will be changed to frontend url, in future
+        methods: ["GET", "POST"],
+        credentials: true
     }
+})
+server.use(cors({
+    origin: ['http://localhost:3000', 'https://admin.socket.io'],
+    credentials: true
+}));
+
+instrument(io, {
+    auth: false, // for development only
+    mode: 'development'
 })
 
 database(); // establishing database connection
@@ -41,13 +53,13 @@ io.on('connection', (socket) => {
         console.log(data);
         socket.broadcast.emit('recieve-new-message', data);
     });
-    socket.on('disconnesct', (reas) => {
+    socket.on('disconnect', (reas) => {
         console.log(`disconnected to: ${socket.id} ${reas} `)
         socket.broadcast.emit('user-left', { id: socket.id, platform: formatPlatform(socket?.handshake?.auth?.platformInfo), reason: reas });
     })
     // socket.on()
 });
 
-socketServer.listen(8080, () => {
-    console.log('listening on port 8080');
+socketServer.listen(process.env.PORT, () => {
+    console.log(`listening on port ${process.env.PORT}`);
 })
