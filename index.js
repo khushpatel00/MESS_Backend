@@ -30,6 +30,19 @@ server.use(express.json());
 server.use('/', require('./Routes/index.routes'))
 server.use('/auth', require('./Routes/auth.routes'))
 
+server.get('/dmusers', async (req, res) => {
+    const sockets = await io.fetchSockets();
+    const users = sockets.map(socket => ({
+        id: socket.id,
+        userId: socket.handshake.auth || null,
+        username: socket.handshake.auth.username || 'Anonymous'
+    }));
+
+    return res.json(users);
+})
+
+
+
 // the same thing that is being used at frontend (web)
 function formatPlatform(platform) {
     if (!platform) return 'unknown device';
