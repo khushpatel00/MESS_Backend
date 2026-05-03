@@ -31,7 +31,7 @@ server.use('/', require('./Routes/index.routes'))
 server.use('/auth', require('./Routes/auth.routes'))
 
 server.get('/dmusers', async (req, res) => {
-    const sockets = await io.fetchSockets();
+    const sockets = await io.of('/DM').fetchSockets();
     const users = sockets.map(socket => ({
         id: socket.id,
         userId: socket.handshake.auth || null,
@@ -72,6 +72,24 @@ io.on('connection', (socket) => {
     })
     // socket.on()
 });
+
+
+io.of('/DM').on('connection', (socket) => {
+    console.log('user connected to DM')
+    socket.on('connectToRoom', ({ room, username }) => {
+        if (typeof room == 'string' || 'String')
+            socket.join(room)
+        else
+            console.log(typeof room);
+
+        socket.on('send-message', (data) => {
+            socket.broadcast.emit('recieve-new-message', data);
+        });
+
+    })
+})
+
+
 
 socketServer.listen(process.env.PORT, () => {
     console.log(`listening on port ${process.env.PORT}`);
