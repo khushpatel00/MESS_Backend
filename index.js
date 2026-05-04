@@ -6,6 +6,7 @@ const cors = require('cors'); // for express REST endpoints
 const socketio = require('socket.io');
 const { instrument } = require('@socket.io/admin-ui')
 const socketServer = require('http').createServer(server);
+const messagesModel = require('./Model/messages.model');
 const io = socketio(socketServer, {
     cors: {
         origin: ['http://localhost:3000', 'https://admin.socket.io', 'http://192.168.5.182:3000'],
@@ -24,11 +25,11 @@ instrument(io, {
         type: 'basic',
         username: 'khushcodes',
         password: '$2a$12$/IOHn.9MzzZ2S3UoaFdM5OhYHopkFqNin6EibPKyyBy/IROeZZgkG'
-    }, 
+    },
     mode: 'development'
 })
 
-// database(); // establishing database connection
+database(); // establishing database connection
 
 server.use(express.urlencoded());
 server.use(express.json());
@@ -127,10 +128,26 @@ io.of('/DM').on('connection', (socket) => {
         }
     });
 
-    socket.on('send-message', (data) => {
+    // cant use GET, cause it wont be that reliable, on base security, will need extra info from client
+    socket.on('get-all-messages', async () => {
+        if (!currentRoom) socket.to(currentRoom).emit('get-all-messages', [])
+
+        // will add pagination later (get messages as user scrolls up)
+        let messages = await messagesModel.find({ chatId: currentRoom }).sort({ createdAt: 1 }).limit(50)
+        // console.log(messages)
+        socket.emit('get-all-messages', messages)
+    })
+
+
+    socket.on('send-message', async (data) => {
         if (!currentRoom) return;
 
         socket.to(currentRoom).emit('recieve-new-message', data);
+        await messagesModel.create({
+            chatId: currentRoom,
+            senderId: socket.handshake.auth.username,
+            content: data.message,
+        })
     });
 });
 
