@@ -8,14 +8,16 @@ const { instrument } = require('@socket.io/admin-ui')
 const socketServer = require('http').createServer(server);
 const io = socketio(socketServer, {
     cors: {
-        origin: ['http://localhost:3000', 'https://admin.socket.io'], // for depelopment stages only (for localhost, and github.io), will be changed to frontend url, in future
+        // origin: ['http://localhost:3000', 'https://admin.socket.io', 'http://192.168.5.182:3000'], // for depelopment stages only (for localhost, and github.io), will be changed to frontend url, in future
+        origin: '*', // for depelopment stages only (for localhost, and github.io), will be changed to frontend url, in future
         methods: ["GET", "POST"],
-        credentials: true
+        // credentials: true
     }
 })
 server.use(cors({
-    origin: ['http://localhost:3000', 'https://admin.socket.io'],
-    credentials: true
+    // origin: ['http://localhost:3000', 'https://admin.socket.io', 'http://192.168.5.182:3000'],
+    origin: '*',
+    // credentials: true
 }));
 
 instrument(io, {
@@ -58,10 +60,15 @@ function formatPlatform(platform) {
 // and increasing efficiency on a smaller scale 
 io.on('connection', (socket) => {
     console.log('connected with: ', socket.id, socket.handshake.auth);
-    socket.broadcast.emit('user-connected', { id: socket.id, platform: formatPlatform(socket?.handshake?.auth?.platformInfo) });
+    socket.broadcast.emit('user-connected', {
+        id: socket.id,
+        platform: formatPlatform(socket?.handshake?.auth?.platformInfo),
+        username: socket?.handshake?.auth?.username,
+        displayName: socket?.handshake?.auth?.displayName,
+    });
     socket.on('send-devinfo', (data) => {
         console.log(data);
-    })
+    });
     socket.on('send-message', (data) => {
         console.log(data);
         socket.broadcast.emit('recieve-new-message', data);
@@ -75,7 +82,8 @@ io.on('connection', (socket) => {
 
 
 io.of('/DM').on('connection', (socket) => {
-    console.log('user connected to DM')
+    console.log(` ${socket.handshake.auth.username} connected to DM`)
+    socket.broadcast.emit('userconnected', { username: socket.handshake.auth.username })
     socket.on('connectToRoom', ({ room, username }) => {
         if (typeof room == 'string' || 'String')
             socket.join(room)
