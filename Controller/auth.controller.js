@@ -43,7 +43,7 @@ exports.login = async (req, res) => {
             let isValid = await bcrypt.compare(password, user?.password);
             if (!isValid) return res.status(401).json('Invalid Credentials');
             if (isValid === true) {
-                let jwttoken = jwt.sign({ username, _id: user._id }, process.env.JWT_SECRET)
+                let jwttoken = jwt.sign({ username, _id: user._id }, process.env.JWT_SECRET, {expiresIn: '1d'})
                 return res.json({ token: jwttoken });
             }
         } else if (email && password) {
@@ -52,7 +52,7 @@ exports.login = async (req, res) => {
             let isValid = await bcrypt.compare(user?.password, password);
             if (!isValid) return res.status(401).json('Invalid Credentials');
             if (isValid === true) {
-                let jwttoken = jwt.sign({ username, _id: user._id })
+                let jwttoken = jwt.sign({ username, _id: user._id }, process.env.JWT_SECRET, {expiresIn: '1d'})
                 return res.json({ token: jwttoken });
             }
         } else return res.status(401).json('Invalid Credentials');

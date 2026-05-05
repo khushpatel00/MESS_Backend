@@ -7,10 +7,10 @@ const socketio = require('socket.io');
 const { instrument } = require('@socket.io/admin-ui')
 const socketServer = require('http').createServer(server);
 const messagesModel = require('./Model/messages.model');
+const { verify } = require('jsonwebtoken');
 const io = socketio(socketServer, {
     cors: {
         origin: ['http://localhost:3000', 'https://admin.socket.io', 'http://192.168.5.182:3000'],
-        // origin: '*', // for depelopment stages only (for localhost, and github.io), will be changed to frontend url, in future
         methods: ["GET", "POST"],
         credentials: true
     }
@@ -59,6 +59,22 @@ function formatPlatform(platform) {
     }
     return String(platform);
 }
+
+io.use((socket, next) => {
+    try {
+
+        const cookie = socket.handshake.headers.cookie
+        console.log('cookie: ', cookie);
+        // const token = parseToken(cookie);
+        if (!token)
+            return next(new Error("Unauthorized"));
+        socket.user = verify(cookie, process.env.JWT_SECRET);
+        next();
+    } catch (error) {
+        console.log(error);
+        return next(new Error("Unauthorized"));
+    }
+})
 
 // keeping the socket connection on root server file for reducing the jumping in files
 // and increasing efficiency on a smaller scale 
@@ -117,10 +133,8 @@ io.of('/DM').on('connection', (socket) => {
         if (typeof room === 'string') {
 
             // leave previous room/chat if exists
-            if (currentRoom) {
+            if (currentRoom)
                 socket.leave(currentRoom);
-            }
-
             socket.join(room);
             currentRoom = room;
 
@@ -130,7 +144,8 @@ io.of('/DM').on('connection', (socket) => {
 
     // cant use GET, cause it wont be that reliable, on base security, will need extra info from client
     socket.on('get-all-messages', async () => {
-        if (!currentRoom) socket.to(currentRoom).emit('get-all-messages', [])
+        if (!currentRoom)
+            socket.to(currentRoom).emit('get-all-messages', [])
 
         // will add pagination later (get messages as user scrolls up)
         let messages = await messagesModel.find({ chatId: currentRoom }).sort({ createdAt: 1 }).limit(50)
@@ -140,7 +155,8 @@ io.of('/DM').on('connection', (socket) => {
 
 
     socket.on('send-message', async (data) => {
-        if (!currentRoom) return;
+        if (!currentRoom)
+            return;
 
         socket.to(currentRoom).emit('recieve-new-message', data);
         await messagesModel.create({
