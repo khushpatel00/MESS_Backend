@@ -60,21 +60,21 @@ function formatPlatform(platform) {
     return String(platform);
 }
 
-io.use((socket, next) => {
-    try {
+// io.use((socket, next) => {
+//     try {
 
-        const cookie = socket.handshake.headers.cookie
-        console.log('cookie: ', cookie);
-        // const token = parseToken(cookie);
-        if (!token)
-            return next(new Error("Unauthorized"));
-        socket.user = verify(cookie, process.env.JWT_SECRET);
-        next();
-    } catch (error) {
-        console.log(error);
-        return next(new Error("Unauthorized"));
-    }
-})
+//         const cookie = socket.handshake.headers.cookie
+//         console.log('cookie: ', cookie);
+//         // const token = parseToken(cookie);
+//         if (!token)
+//             return next(new Error("Unauthorized"));
+//         socket.user = verify(cookie, process.env.JWT_SECRET);
+//         next();
+//     } catch (error) {
+//         console.log(error);
+//         return next(new Error("Unauthorized"));
+//     }
+// })
 
 // keeping the socket connection on root server file for reducing the jumping in files
 // and increasing efficiency on a smaller scale 
