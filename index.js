@@ -43,6 +43,9 @@ server.get('/dmusers', async (req, res) => {
         userId: socket.handshake.auth || null,
         username: socket.handshake.auth.username || 'Anonymous'
     }));
+    
+    // cause [] === [] returns false, so need to convert it to string and then compare
+    if(JSON.stringify(users) === '[]') return res.json(null);
 
     return res.json(users);
 })
