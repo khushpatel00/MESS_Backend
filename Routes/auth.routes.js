@@ -4,5 +4,6 @@ const root = require('../Controller/auth.controller')
 
 Router.post('/login', root.login)
 Router.post('/register', root.addUser);
+Router.get('/verify', root.verify);
 
 module.exports = Router

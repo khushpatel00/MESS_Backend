@@ -43,7 +43,7 @@ exports.login = async (req, res) => {
             let isValid = await bcrypt.compare(password, user?.password);
             if (!isValid) return res.status(401).json('Invalid Credentials');
             if (isValid === true) {
-                let jwttoken = jwt.sign({ username, _id: user._id }, process.env.JWT_SECRET, {expiresIn: '1d'})
+                let jwttoken = jwt.sign({ username, _id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' })
                 return res.json({ token: jwttoken });
             }
         } else if (email && password) {
@@ -52,12 +52,31 @@ exports.login = async (req, res) => {
             let isValid = await bcrypt.compare(user?.password, password);
             if (!isValid) return res.status(401).json('Invalid Credentials');
             if (isValid === true) {
-                let jwttoken = jwt.sign({ username, _id: user._id }, process.env.JWT_SECRET, {expiresIn: '1d'})
+                let jwttoken = jwt.sign({ username, _id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' })
                 return res.json({ token: jwttoken });
             }
         } else return res.status(401).json('Invalid Credentials');
     } catch (error) {
         console.log(error);
         return res.status(500).json('Internal Server Error');
+    }
+}
+exports.verify = async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization;
+        const token = authHeader && authHeader.replace(/^Bearer\s+/, '');
+        // console.log(token)
+        let user = jwt.verify(token, process.env.JWT_SECRET)
+        if (!user)
+            return res.status(401).json('Unauthorized')
+        else {
+            // let useronDB = await userModel.findById(user._id);
+            let exists = await userModel.exists({ _id: user._id }) // returns { _id } if found, or null
+            if (exists) return res.status(200).json('Authorized')
+            else return res.status(401).json('Unauthorized')
+        }
+    } catch (error) {
+        console.log(error)
+        return res.status(401).json('Unauthorized')
     }
 }

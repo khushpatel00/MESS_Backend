@@ -2,7 +2,8 @@ require('dotenv').config()
 const express = require('express');
 const database = require('./Config/databaseconfig');
 const server = express();
-const cors = require('cors'); // for express REST endpoints
+const cors = require('cors');
+const cookie = require('cookie');
 const socketio = require('socket.io');
 const { instrument } = require('@socket.io/admin-ui')
 const socketServer = require('http').createServer(server);
@@ -31,7 +32,7 @@ instrument(io, {
     mode: 'development'
 })
 
-database(); // establishing database connection
+database();
 
 server.use(express.urlencoded());
 server.use(express.json());
@@ -39,7 +40,6 @@ server.use('/', require('./Routes/index.routes'))
 server.use('/auth', require('./Routes/auth.routes'))
 
 server.get('/dmusers', async (req, res) => {
-    console.log('dmusers request hit !')
     const sockets = await io.of('/DM').fetchSockets();
     const users = sockets.map(socket => ({
         id: socket.id,
@@ -66,21 +66,23 @@ function formatPlatform(platform) {
     return String(platform);
 }
 
-// io.use((socket, next) => {
-//     try {
+io.use((socket, next) => {
+    try {
+        // const rawCookies = socket.handshake.headers.cookie
+        // const cookies = cookie.parse(rawCookies || '');
+        // console.log('cookie: ', cookies);
+        // if (!cookies.token)
+        //     return next(new Error("Unauthorized"));
 
-//         const cookie = socket.handshake.headers.cookie
-//         console.log('cookie: ', cookie);
-//         // const token = parseToken(cookie);
-//         if (!token)
-//             return next(new Error("Unauthorized"));
-//         socket.user = verify(cookie, process.env.JWT_SECRET);
-//         next();
-//     } catch (error) {
-//         console.log(error);
-//         return next(new Error("Unauthorized"));
-//     }
-// })
+        let token = socket?.handshake?.auth?.token
+        socket.user = verify(token, process.env.JWT_SECRET);
+        console.log('authorized user:', socket.user)
+        next();
+    } catch (error) {
+        console.log(error.message);
+        return next(new Error("Unauthorized"));
+    }
+})
 
 // keeping the socket connection on root server file for reducing the jumping in files
 // and increasing efficiency on a smaller scale 
@@ -96,24 +98,20 @@ io.on('connection', (socket) => {
         console.log(data);
     });
     socket.on('send-message', (data) => {
-        console.log(data);
+        // console.log(data);
         let responseJSON = {
             isSent: data.isSent || data.IsSent || false, // client (web and iOS) expects false as default value
             displayName: data.displayName,
             message: data.message,
             uid: data.uid
         }
-        // if (data.IsSent){
-        //     data.isSent = data.IsSent
-        //     delete data.IsSent
-        // }
         // iOS may pass nil (null in swift) if users hasent provided username
         // webclient and iOS side validation required to filter specifiv names, to not mess up on server side
         if (responseJSON.displayName == 'nil') {
             responseJSON.displayName = 'iOS / iPadOS'
         }
 
-        console.log("final data: ", responseJSON);
+        console.log(responseJSON);
 
         socket.broadcast.emit('recieve-new-message', responseJSON);
     });
@@ -150,7 +148,7 @@ io.on('connection', (socket) => {
 
 // YEAH, i know that was a dumb mistake
 io.of('/DM').on('connection', (socket) => {
-    console.log(`${socket.handshake.auth.username} connected to DM`);
+    console.log(`DM: ${socket.handshake.auth.username} connected`);
 
     socket.broadcast.emit('userconnected', {
         username: socket.handshake.auth.username
@@ -170,15 +168,12 @@ io.of('/DM').on('connection', (socket) => {
             socket.emit('currentroom', { room });
         }
     });
-
-    // cant use GET, cause it wont be that reliable, on base security, will need extra info from client
     socket.on('get-all-messages', async () => {
         if (!currentRoom)
             socket.to(currentRoom).emit('get-all-messages', [])
 
         // will add pagination later (get messages as user scrolls up)
         let messages = await messagesModel.find({ chatId: currentRoom }).sort({ createdAt: 1 }).limit(50)
-        // console.log(messages)
         socket.emit('get-all-messages', messages)
     })
 
